@@ -1,35 +1,76 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useRef, useState } from 'react';
+import { GameEngine } from './engine/GameEngine';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const canvasRef = useRef(null);
+  const engineRef = useRef(null);
+  const [activeSpell, setActiveSpell] = useState('bolt');
+
+  useEffect(() => {
+    // 1. Init
+    if (canvasRef.current && !engineRef.current) {
+      console.log("🚀 Mounting Game Engine...");
+      engineRef.current = new GameEngine(canvasRef.current);
+    }
+
+    // 2. Cleanup Function (React calls this on refresh/unmount)
+    return () => {
+      console.log("🛑 Unmounting Game Engine...");
+      if (engineRef.current) {
+        engineRef.current.dispose(); // This kills the network connection
+        engineRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleSpellSelect = (type) => {
+    setActiveSpell(type);
+    if (engineRef.current && engineRef.current.spellSystem) {
+      engineRef.current.spellSystem.setType(type);
+    }
+  };
+
+  const handleHover = (e) => {
+    if(e.cancelable) e.preventDefault();
+    if (engineRef.current && engineRef.current.wizard) {
+      engineRef.current.wizard.triggerHover();
+      if(engineRef.current.networkManager) {
+        engineRef.current.networkManager.sendCastSpell('hover', {x:0, y:0, z:0});
+      }
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="app-container">
+      <canvas ref={canvasRef} className="game-canvas" />
+
+      <div className="ui-layer">
+        <div className="score-board">Wizardio Dominion</div>
+        
+        <div className="spell-bar">
+          {['bolt', 'lightning', 'fire', 'water', 'beam'].map((spell) => (
+            <button
+              key={spell}
+              className={`spell-btn ${activeSpell === spell ? 'active' : ''}`}
+              onTouchStart={(e) => { e.preventDefault(); handleSpellSelect(spell); }}
+              onClick={() => handleSpellSelect(spell)}
+            >
+              {spell}
+            </button>
+          ))}
+          
+          <button 
+            className="spell-btn hover-btn"
+            onTouchStart={handleHover}
+            onClick={handleHover}
+          >
+            Levitate
+          </button>
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;

@@ -31,5 +31,5 @@ dist-ssr
 # We want to commit the platform folders (android/ios) but NOT the build artifacts
 /android/app/build
 /android/.gradle
-/ios/App/Pods
+/ios/App/
 /ios/App/DerivedData
