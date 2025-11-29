@@ -1,42 +1,102 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+/* Reset & Fullscreen */
+:root {
+  background-color: #111;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden; /* Prevent scrolling */
+  touch-action: none; /* Prevent pull-to-refresh */
+}
+
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* UI Layer */
+.ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none; /* Let touches pass through to game */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.score-board {
+  margin-top: 50px; /* Space for iPhone notch */
   text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 0 10px #000;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Spell Bar at Bottom */
+.spell-bar {
+  pointer-events: auto; /* Re-enable clicks */
+  background: rgba(0, 0, 0, 0.6);
+  padding: 20px 10px;
+  padding-bottom: 40px; /* Safe area for swipe bar */
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* Buttons */
+.spell-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ddd;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  min-width: 70px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.card {
-  padding: 2em;
+.spell-btn:active {
+  transform: scale(0.95);
 }
 
-.read-the-docs {
-  color: #888;
+.spell-btn.active {
+  background: rgba(255, 255, 255, 0.9);
+  color: #000;
+  border-color: #fff;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  transform: translateY(-5px);
+}
+
+.hover-btn {
+  border-color: #cc00cc;
+  color: #ffccff;
+}
+.hover-btn:active {
+  background: #cc00cc;
+  color: white;
 }
