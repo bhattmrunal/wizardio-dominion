@@ -51,33 +51,34 @@ body, html, #root {
 
 /* Spell Bar at Bottom */
 .spell-bar {
-  pointer-events: auto; /* Re-enable clicks */
-  background: rgba(0, 0, 0, 0.6);
-  padding: 20px 10px;
-  padding-bottom: 40px; /* Safe area for swipe bar */
-  display: flex;
-  overflow-x: auto;
-  gap: 10px;
-  justify-content: center;
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 8px 12px;
+    border-radius: 16px;
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+    white-space: nowrap;
 }
 
 /* Buttons */
 .spell-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ddd;
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 14px;
-  font-weight: bold;
-  text-transform: uppercase;
-  min-width: 70px;
-  cursor: pointer;
-  transition: all 0.2s;
-  user-select: none;
-  -webkit-user-select: none;
+    width: 48px;  /* Square buttons */
+    height: 48px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
 }
 
 .spell-btn:active {
@@ -85,13 +86,19 @@ body, html, #root {
 }
 
 .spell-btn.active {
-  background: rgba(255, 255, 255, 0.9);
-  color: #000;
-  border-color: #fff;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-  transform: translateY(-5px);
+    background: #ffaa00;
+    color: #1a1a1a;
+    border-color: #ffaa00;
+    box-shadow: 0 0 12px rgba(255, 170, 0, 0.6);
+    transform: translateY(-4px);
 }
 
+.spell-btn.hover-btn {
+    background: rgba(0, 200, 255, 0.15);
+    border-color: rgba(0, 200, 255, 0.4);
+    width: auto;
+    padding: 0 12px;
+}
 .hover-btn {
   border-color: #cc00cc;
   color: #ffccff;
@@ -99,4 +106,39 @@ body, html, #root {
 .hover-btn:active {
   background: #cc00cc;
   color: white;
+}
+
+.dodge-controls {
+    pointer-events: auto;
+    position: absolute;
+    bottom: 160px; /* Positioned above the spell bar */
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 30px;
+    box-sizing: border-box;
+}
+
+/* Ensure the buttons themselves are touchable */
+.dodge-btn {
+    pointer-events: auto;
+    width: 70px;
+    height: 70px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 28px;
+    backdrop-filter: blur(4px);
+    transition: transform 0.1s, background 0.2s;
+    display: flex; /* Center the arrow */
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 4px; /* Visual tweak for arrow alignment */
+}
+
+.dodge-btn:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.9);
+    border-color: white;
 }

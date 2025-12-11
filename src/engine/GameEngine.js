@@ -21,9 +21,8 @@ export class GameEngine {
         this.clock = new THREE.Clock();
         this.isRunning = true;
         
-        // CAMERA SETUP
         this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 12, 16); 
+        this.camera.position.set(0, 12, 12); 
         this.camera.lookAt(0, 2, -5);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
@@ -44,12 +43,42 @@ export class GameEngine {
         this.spellSystem = new SpellSystem(this.scene, this.wizard, this.particleSystem);
         this.networkManager = new NetworkManager(this.scene, this.spellSystem, this.enemyManager);
         
-        // SENSORS
+        // --- SENSOR & GESTURE SETUP ---
         this.sensorManager = new NativeSensorManager();
         this.sensorManager.startListeners();
-        this.sensorManager.onJerk = () => {
-            const target = this.sensorManager.target;
+
+        // 1. FLICK TO CAST
+        this.sensorManager.onCast = (direction) => {
+            console.log(`🚀 Engine received Flick: ${direction}`);
+
+            // TARGET LOGIC
+            // Y=5 (Chest Height), Z=-40 (Opponent Distance)
+            const target = new THREE.Vector3(0, 5, -40); 
+            
+            // X Lanes (Lane Width approx 8 units at distance)
+            if (direction === 'left') target.x = -12;
+            if (direction === 'right') target.x = 12;
+            
+            // VISUAL DEBUG (Move the red dot instantly)
+            this.spellSystem.updateTarget(target);
+
+            this.wizard.lookAt(target);
+            this.networkManager.sendAim(target);
             this.triggerCast(target);
+            
+            // Auto-Stop after 500ms
+            setTimeout(() => {
+                this.triggerStop(target);
+            }, 500); 
+        };
+
+        // 2. TILT TO SHIELD
+        this.sensorManager.onShield = (isActive) => {
+            if (this.wizard.isShielding !== isActive) {
+                console.log(`🛡️ Shield State: ${isActive}`);
+                this.wizard.setShield(isActive);
+                this.networkManager.sendShield(isActive);
+            }
         };
 
         this.setupInputs();
@@ -59,11 +88,29 @@ export class GameEngine {
         window.addEventListener('resize', this.resizeHandler);
     }
 
+    // --- BUTTON CONTROLS (Called from App.jsx) ---
+    movePlayer(direction) {
+        console.log("Moving Player:", direction);
+        if (direction === 'left') {
+            this.wizard.moveLeft();
+            // Optional: Send move to network if you have that implemented
+             if(this.networkManager.sendMove) this.networkManager.sendMove(this.wizard.group.position.x); 
+        }
+        if (direction === 'right') {
+            this.wizard.moveRight();
+             if(this.networkManager.sendMove) this.networkManager.sendMove(this.wizard.group.position.x);
+        }
+    }
+
     triggerCast(target) {
+        console.log("🔫 triggerCast called!"); // <--- LOOK FOR THIS
+
         if (!this.spellSystem.isCasting) {
+            console.log("✨ Starting Spell System Cast..."); 
             this.spellSystem.startCasting(target);
-            const type = this.spellSystem.type;
             
+            // Network Logic
+            const type = this.spellSystem.type;
             if (type === 'beam' || type === 'lightning') {
                 this.networkManager.sendCastSpell(type + '_start', target);
             } else if (type === 'water') {
@@ -71,9 +118,23 @@ export class GameEngine {
             } else {
                 this.networkManager.sendCastSpell(type, target);
             }
+        } else {
+            console.log("⚠️ Ignored: Already casting!");
         }
     }
 
+    // Call this whenever the UI changes the spell
+    setSpellType(type) {
+        // 1. Update Physics Engine
+        if (this.spellSystem) {
+            this.spellSystem.setType(type);
+        }
+        
+        // 2. Update Sensor Engine (for cooldowns)
+        if (this.sensorManager) {
+            this.sensorManager.setSpellType(type);
+        }
+    }
     triggerStop(target) {
         if (this.spellSystem.isCasting) {
             const type = this.spellSystem.type;
@@ -84,7 +145,21 @@ export class GameEngine {
         this.spellSystem.stopCasting();
     }
 
-setupInputs() {
+    // Call this whenever the UI changes the spell
+    setSpellType(type) {
+        // 1. Update Physics Engine
+        if (this.spellSystem) {
+            this.spellSystem.setType(type);
+        }
+        
+        // 2. Update Sensor Engine (for cooldowns)
+        if (this.sensorManager) {
+            this.sensorManager.setSpellType(type);
+        }
+    }
+
+    setupInputs() {
+        // Keep existing Mouse/Touch inputs for Web Debugging
         const raycaster = new THREE.Raycaster();
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); 
         const target = new THREE.Vector3();
@@ -100,8 +175,6 @@ setupInputs() {
             );
 
             raycaster.setFromCamera(mouse, this.camera);
-            
-            // 1. Raycast Floor
             const intersectPoint = new THREE.Vector3();
             const hit = raycaster.ray.intersectPlane(plane, intersectPoint);
             
@@ -110,66 +183,30 @@ setupInputs() {
                 if (target.z > -2.0) target.z = -2.0; 
             }
 
-            // 2. Update Visuals
+            // If sensors are OFF (Web Mode), allow mouse to aim
             if (!this.sensorManager.enabled) {
                 this.wizard.lookAt(target);
-                if (isMove || isDown) {
-                    this.networkManager.sendAim(target);
-                }
-                // Always update spell target visually
                 this.spellSystem.updateTarget(target);
+                if (isMove || isDown) this.networkManager.sendAim(target);
             }
 
-            // 3. TRIGGER ACTIONS
             if (!isMove) {
-                if (isDown) {
-                    this.triggerCast(target);
-                } else {
-                    // --- FORCE STOP ---
-                    // We send this regardless of state to ensure the network clears
-                    console.log("👆 Input Up: Sending STOP");
-                    this.networkManager.sendCastSpell('stop_channel', target);
-                    this.spellSystem.stopCasting();
+                if (isDown) this.triggerCast(target);
+                else {
+                    this.triggerStop(target);
                 }
             }
         };
 
-        // --- LISTENERS ---
+        canvas.addEventListener('mousedown', (e) => { if(e.target.closest('button')) return; handlePointer(e.clientX, e.clientY, true, false); });
+        window.addEventListener('mousemove', (e) => { handlePointer(e.clientX, e.clientY, e.buttons === 1, true); });
+        window.addEventListener('mouseup', () => { handlePointer(0, 0, false, false); });
         
-        canvas.addEventListener('mousedown', (e) => {
-            if(e.target.closest('.spell-btn')) return;
-            handlePointer(e.clientX, e.clientY, true, false);
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            handlePointer(e.clientX, e.clientY, e.buttons === 1, true);
-        });
-
-        // Global Mouse Up
-        window.addEventListener('mouseup', () => { 
-            handlePointer(0, 0, false, false); 
-        });
-
-        // Touch
-        canvas.addEventListener('touchstart', (e) => {
-            if(e.target.closest('.spell-btn')) return;
-            e.preventDefault();
-            handlePointer(e.touches[0].clientX, e.touches[0].clientY, true, false);
-        }, { passive: false });
-        
-        window.addEventListener('touchmove', (e) => {
-             if(e.target.closest('.spell-btn')) return;
-             e.preventDefault();
-             if (e.touches.length > 0) {
-                handlePointer(e.touches[0].clientX, e.touches[0].clientY, true, true);
-             }
-        }, { passive: false });
-        
-        // Global Touch End
-        window.addEventListener('touchend', () => { 
-            handlePointer(0, 0, false, false); 
-        });
+        canvas.addEventListener('touchstart', (e) => { if(e.target.closest('button')) return; e.preventDefault(); handlePointer(e.touches[0].clientX, e.touches[0].clientY, true, false); }, { passive: false });
+        window.addEventListener('touchmove', (e) => { if(e.target.closest('button')) return; e.preventDefault(); if(e.touches.length > 0) handlePointer(e.touches[0].clientX, e.touches[0].clientY, true, true); }, { passive: false });
+        window.addEventListener('touchend', () => { handlePointer(0, 0, false, false); });
     }
+
     onWindowResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
@@ -177,33 +214,14 @@ setupInputs() {
         this.composer.setSize(window.innerWidth, window.innerHeight);
     }
 
-  animate() {
-        if (!this.renderer) return;
+    animate() {
+        if (!this.isRunning) return;
         requestAnimationFrame(() => this.animate());
         const delta = this.clock.getDelta();
 
         // 1. UPDATE SENSORS
-        // Only use sensors if they are truly active and we aren't using the mouse
+        // This checks for flicks and tilts
         this.sensorManager.update();
-        
-        // CHECK: Is the sensor actually doing anything?
-        // On Desktop, this.sensorManager.enabled might be false, but let's be explicit.
-        if (this.sensorManager.enabled) {
-            const target = this.sensorManager.target;
-            
-            // Only override if we haven't touched the mouse recently
-            // (You can add a 'lastInputType' variable to track 'mouse' vs 'sensor')
-            // For now, let's assume if sensor is enabled, it wins on mobile.
-            // BUT on desktop, enabled should be false.
-            
-            this.wizard.lookAt(target);
-            this.networkManager.sendAim(target);
-            
-            // CRITICAL FIX: Only update spell target if NOT casting via mouse
-            if (this.spellSystem.isCasting) {
-                this.spellSystem.updateTarget(target);
-            }
-        }
 
         // 2. UPDATE GAME
         if(this.windSystem) this.windSystem.update(delta);
@@ -219,10 +237,6 @@ setupInputs() {
         this.isRunning = false;
         window.removeEventListener('resize', this.resizeHandler);
         if (this.networkManager) this.networkManager.disconnect();
-        if (this.renderer) {
-            this.renderer.dispose();
-            this.renderer = null;
-        }
-        console.log("🗑️ Game Engine Disposed");
+        if (this.renderer) { this.renderer.dispose(); this.renderer = null; }
     }
 }

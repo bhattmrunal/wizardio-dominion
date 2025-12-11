@@ -53,6 +53,20 @@ export class NetworkManager {
                 this.handleIncomingSpell(data);
             }
         });
+        this.socket.on("playerMove", (data) => {
+            if (data.sessionId !== sessionId) {
+                // Opponent moved!
+                // Assuming we have reference to opponent wrapper, update it.
+                // For now, we update the 'EnemyManager' target so spells aim correctly
+                this.enemyManager.updateBossPosition(-data.x); // Mirror X
+            }
+        });
+
+        this.socket.on("playerShield", (data) => {
+            if (data.sessionId !== sessionId) {
+                this.enemyManager.setBossShield(data.active);
+            }
+        });
 
         this.socket.on("playerAim", (data) => {
             // Ignore aim updates from myself
@@ -86,6 +100,15 @@ export class NetworkManager {
             });
             this.lastAimTime = now;
         }
+    }
+    sendMove(xPos) {
+        if (!this.socket) return;
+        this.socket.emit("move", { x: xPos });
+    }
+
+    sendShield(isActive) {
+        if (!this.socket) return;
+        this.socket.emit("shield", { active: isActive });
     }
 
     handleIncomingSpell(data) {

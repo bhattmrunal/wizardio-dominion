@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Wizardio Dominion</string>
+    <string name="title_activity_main">Wizardio Dominion</string>
+    <string name="package_name">com.wizardiodominion.app</string>
+    <string name="custom_url_scheme">com.wizardiodominion.app</string>
+</resources>
